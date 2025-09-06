@@ -69,40 +69,135 @@ export async function handleEvents(events: LineEvent[], deps: Deps): Promise<voi
             previewImageUrl: url,
           } as any;
 
+          // Push edited image first to ensure at least one result reaches the user promptly
+          if (deps.pushMessage) {
+            try {
+              await deps.pushMessage(userId, { messages: [img] });
+            } catch (e) {
+              // non-fatal; continue to attempt grid + ask
+            }
+          }
+
           // Prepare 2x2 grid assets
           const toDataUrl = (b: { data: Buffer; mimeType: string }) => `data:${b.mimeType};base64,${b.data.toString('base64')}`;
           const originalUrl = deps.toPublicUrl ? await deps.toPublicUrl(toDataUrl(blob)) : toDataUrl(blob);
-          // Generate mesh overlays (prefer python-server if provided)
-          let origMeshUrl: string;
-          let afterMeshUrl: string;
-          if (deps.overlayMesh) {
-            const origMesh = await deps.overlayMesh(toDataUrl(blob));
-            origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
-            const afterMesh = await deps.overlayMesh(edited.dataUrl);
-            afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+          // Generate mesh overlays with robust fallbacks
+          // 方針: 可能であれば Python の transfer API を両方に使い、
+          // どちらか一方だけフォールバックになった場合は両方ともモデル重ね描きに揃える（見た目の一貫性優先）
+          let origMeshUrl: string | undefined;
+          let afterMeshUrl: string | undefined;
+          let usedModelFallbackBefore = false;
+          let usedModelFallbackAfter = false;
+          const fallbackMeshWithModel = async (dataUrl: string) => {
+            const m = /^data:([^;]+);base64,(.*)$/i.exec(dataUrl);
+            const b = m ? { mimeType: m[1], data: Buffer.from(m[2], 'base64') } : { mimeType: 'image/png', data: Buffer.alloc(0) };
+            const out = await deps.editImageWithPrompt(b as any, MESH_OVERLAY_PROMPT);
+            return deps.toPublicUrl ? await deps.toPublicUrl(out.dataUrl) : out.dataUrl;
+          };
+
+          if (deps.overlayMeshTransfer || deps.overlayMesh) {
+            // 強制正規化: 両方とも 1024x1024 に描画
+            const CANON = 1024;
+            try {
+              if (deps.overlayMeshTransfer) {
+                const afterMesh = await deps.overlayMeshTransfer(toDataUrl(blob), edited.dataUrl, {
+                  swap: false,
+                  renderW: CANON,
+                  renderH: CANON,
+                });
+                afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+              } else if (deps.overlayMesh) {
+                const afterMesh = await deps.overlayMesh(edited.dataUrl, { renderW: CANON, renderH: CANON });
+                afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+              }
+            } catch (e) {
+              console.warn('[LINE] AFTER mesh overlay failed; trying simple or model fallback:', (e as Error)?.message);
+              try {
+                if (deps.overlayMesh) {
+                  const afterMesh = await deps.overlayMesh(edited.dataUrl, { renderW: CANON, renderH: CANON });
+                  afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+                } else {
+                  throw e;
+                }
+              } catch (e2) {
+                try {
+                  afterMeshUrl = await fallbackMeshWithModel(edited.dataUrl);
+                  usedModelFallbackAfter = true;
+                } catch (e3) {
+                  console.error('[LINE] AFTER model overlay also failed:', (e3 as Error)?.message);
+                }
+              }
+            }
+
+            try {
+              if (deps.overlayMesh) {
+                const beforeMesh = await deps.overlayMesh(toDataUrl(blob), { renderW: CANON, renderH: CANON });
+                origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(beforeMesh.dataUrl) : beforeMesh.dataUrl;
+              } else if (deps.overlayMeshTransfer) {
+                const beforeMesh = await deps.overlayMeshTransfer(toDataUrl(blob), edited.dataUrl, { swap: true, canonToTarget: true, renderW: CANON, renderH: CANON });
+                origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(beforeMesh.dataUrl) : beforeMesh.dataUrl;
+              }
+            } catch (e) {
+              console.warn('[LINE] BEFORE mesh overlay failed; fallback to model:', (e as Error)?.message);
+              try {
+                origMeshUrl = await fallbackMeshWithModel(toDataUrl(blob));
+                usedModelFallbackBefore = true;
+              } catch (e2) {
+                console.error('[LINE] BEFORE model overlay also failed:', (e2 as Error)?.message);
+              }
+            }
           } else {
-            // Fallback: use image model to draw mesh
-            const origMesh = await deps.editImageWithPrompt(blob, MESH_OVERLAY_PROMPT);
-            origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
-            const m = /^data:([^;]+);base64,(.*)$/i.exec(edited.dataUrl);
-            const editedBlob = m ? { mimeType: m[1], data: Buffer.from(m[2], 'base64') } : { mimeType: 'image/png', data: Buffer.alloc(0) };
-            const afterMesh = await deps.editImageWithPrompt(editedBlob as any, MESH_OVERLAY_PROMPT);
-            afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+            // No Python server: 両方ともモデル重ね描き
+            origMeshUrl = await fallbackMeshWithModel(toDataUrl(blob));
+            afterMeshUrl = await fallbackMeshWithModel(edited.dataUrl);
+            usedModelFallbackBefore = true;
+            usedModelFallbackAfter = true;
           }
 
-          const flex = build2x2ComparisonFlex({
-            before: originalUrl,
-            after: url,
-            beforeMesh: origMeshUrl,
-            afterMesh: afterMeshUrl,
-          });
-          const ask: TextMessage = {
-            type: 'text',
-            text: '結果はいかがでしたか？',
-            quickReply: buildRatingQuickReply(),
-          } as any;
+          // 片方だけフォールバックになってしまった場合は、見た目を揃えるため両方ともモデル重ね描きに置き換え
+          if (
+            (origMeshUrl && afterMeshUrl) &&
+            ((usedModelFallbackBefore && !usedModelFallbackAfter) || (!usedModelFallbackBefore && usedModelFallbackAfter))
+          ) {
+            try {
+              const [b, a] = await Promise.all([
+                fallbackMeshWithModel(toDataUrl(blob)),
+                fallbackMeshWithModel(edited.dataUrl),
+              ]);
+              origMeshUrl = b;
+              afterMeshUrl = a;
+              usedModelFallbackBefore = true;
+              usedModelFallbackAfter = true;
+              console.log('[LINE] Unified mesh style by using model overlays for both BEFORE/AFTER');
+            } catch (e) {
+              console.warn('[LINE] Failed to unify mesh style via model overlays:', (e as Error)?.message);
+            }
+          }
+
+          // Attempt to push 2x2 flex + ask together (preferred)
           if (deps.pushMessage) {
-            await deps.pushMessage(userId, { messages: [img, flex as any, ask] });
+            const ask: TextMessage = {
+              type: 'text',
+              text: '結果はいかがでしたか？',
+              quickReply: buildRatingQuickReply(),
+            } as any;
+            if (origMeshUrl && afterMeshUrl) {
+              try {
+                const flex = build2x2ComparisonFlex({
+                  before: originalUrl,
+                  after: url,
+                  beforeMesh: origMeshUrl,
+                  afterMesh: afterMeshUrl,
+                });
+                await deps.pushMessage(userId, { messages: [flex as any, ask] });
+              } catch (e) {
+                console.error('[LINE] build or push flex failed; sending ask only:', (e as Error)?.message);
+                await deps.pushMessage(userId, { messages: [ask] });
+              }
+            } else {
+              // If meshes are unavailable, still send ask to keep UX progressing
+              await deps.pushMessage(userId, { messages: [ask] });
+            }
           }
         } else {
           const msg: TextMessage = {
@@ -122,10 +217,12 @@ export async function handleEvents(events: LineEvent[], deps: Deps): Promise<voi
       }
     } catch (e) {
       // Must reply 200 to LINE even on errors; notify user when possible
-      if ((ev as any).replyToken) {
-        await deps.replyMessage((ev as any).replyToken, {
-          messages: [{ type: 'text', text: '処理中にエラーが発生しました。時間をおいて再度お試しください。' }],
-        });
+      const userId = getUserId(ev);
+      const errMsg = { messages: [{ type: 'text', text: '処理中にエラーが発生しました。時間をおいて再度お試しください。' }] };
+      if (userId && deps.pushMessage) {
+        try { await deps.pushMessage(userId, errMsg); } catch {}
+      } else if ((ev as any).replyToken) {
+        try { await deps.replyMessage((ev as any).replyToken, errMsg); } catch {}
       }
       // swallow
     }

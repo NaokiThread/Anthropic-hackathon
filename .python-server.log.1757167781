@@ -1,0 +1,31 @@
+INFO:     Started server process [32195]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1757150729.864506       1 gl_context.cc:344] GL version: 2.1 (2.1 Metal - 89.4), renderer: Apple M3
+INFO:face_mesh:FaceMeshProcessor initialized
+INFO:mesh_editor:MeshEditor initialized
+INFO:nano_banana:NanoBananaProcessor (stub) initialized
+INFO:instruction_parser:InstructionParser initialized
+INFO:     127.0.0.1:61290 - "GET /health HTTP/1.1" 200 OK
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+INFO:     127.0.0.1:61301 - "GET /health HTTP/1.1" 200 OK
+INFO:app:Visualizing mesh from image: image.png, size: (207, 242)
+INFO:face_mesh:Detected face orientation: right
+INFO:face_mesh:Generated 918 triangular faces using Delaunay triangulation
+INFO:face_mesh:Successfully built 3D mesh with 478 vertices for right face
+ERROR:app:Error visualizing mesh: local variable 'cv2' referenced before assignment
+INFO:     127.0.0.1:61483 - "POST /visualize-mesh HTTP/1.1" 500 Internal Server Error
+INFO:app:Visualizing mesh from image: image.png, size: (207, 242)
+INFO:face_mesh:Detected face orientation: right
+INFO:face_mesh:Generated 918 triangular faces using Delaunay triangulation
+INFO:face_mesh:Successfully built 3D mesh with 478 vertices for right face
+ERROR:app:Error visualizing mesh: local variable 'cv2' referenced before assignment
+INFO:     127.0.0.1:61525 - "POST /visualize-mesh HTTP/1.1" 500 Internal Server Error
+INFO:app:Visualizing mesh from image: image.png, size: (207, 242)
+INFO:face_mesh:Detected face orientation: right
+INFO:face_mesh:Generated 918 triangular faces using Delaunay triangulation
+INFO:face_mesh:Successfully built 3D mesh with 478 vertices for right face
+ERROR:app:Error visualizing mesh: local variable 'cv2' referenced before assignment
+INFO:     127.0.0.1:61671 - "POST /visualize-mesh HTTP/1.1" 500 Internal Server Error

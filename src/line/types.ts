@@ -28,7 +28,16 @@ export type Deps = {
   store: ImageStore;
   toPublicUrl?: (dataUrl: string) => Promise<string>;
   // Optional: overlay a facial mesh on given image (dataUrl in / out)
-  overlayMesh?: (dataUrl: string) => Promise<{ dataUrl: string }>;
+  overlayMesh?: (
+    dataUrl: string,
+    opts?: { renderW?: number; renderH?: number; alpha?: number; thickness?: number }
+  ) => Promise<{ dataUrl: string }>;
+  // Optional: overlay mesh extracted from source image onto target image
+  overlayMeshTransfer?: (
+    sourceDataUrl: string,
+    targetDataUrl: string,
+    opts?: { swap?: boolean; canonToTarget?: boolean; alpha?: number; thickness?: number }
+  ) => Promise<{ dataUrl: string; info?: any }>;
 };
 
 export type TextMessage = { type: 'text'; text: string; quickReply?: any };

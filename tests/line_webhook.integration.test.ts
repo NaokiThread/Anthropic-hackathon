@@ -61,19 +61,20 @@ describe('handleEvents', () => {
     expect(deps.replyMessage).toHaveBeenCalled();
     const replyPayload = (deps.replyMessage as any).mock.calls[0][1];
     expect(replyPayload).toMatchObject({ messages: [ { type: 'text' } ] });
-    // 2) push image + grid and ask for rating
+    // 2) first push: image only (fast path)
     expect(deps.pushMessage).toHaveBeenCalled();
-    const pushArgs = (deps.pushMessage as any).mock.calls[0];
-    expect(pushArgs[0]).toBe('U1');
-    const pushPayload = pushArgs[1];
-    expect(Array.isArray(pushPayload.messages)).toBe(true);
-    // Should include an image message (After), a flex (2x2), and a text (rating)
-    const types = pushPayload.messages.map((m: any) => m.type);
-    expect(types).toContain('image');
+    const first = (deps.pushMessage as any).mock.calls[0];
+    expect(first[0]).toBe('U1');
+    const firstPayload = first[1];
+    expect(firstPayload.messages.map((m: any) => m.type)).toEqual(['image']);
+    // 3) second push: flex + ask
+    const second = (deps.pushMessage as any).mock.calls[1];
+    const secondPayload = second[1];
+    const types = secondPayload.messages.map((m: any) => m.type);
     expect(types).toContain('flex');
     expect(types).toContain('text');
     // Validate Flex message shape includes 4 images
-    const flex = pushPayload.messages.find((m: any) => m.type === 'flex');
+    const flex = secondPayload.messages.find((m: any) => m.type === 'flex');
     expect(flex).toBeDefined();
     const body = flex.contents?.body;
     expect(body?.type).toBe('box');

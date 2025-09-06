@@ -152,6 +152,11 @@ async def analyze_face(
 async def visualize_mesh(
     image: UploadFile = File(...),
     consent: bool = Form(False),
+    alpha: float = Form(0.45),
+    thickness: int = Form(1),
+    # Optional: force render size (used to equalize stroke thickness across different image sizes)
+    render_w: Optional[int] = Form(None),
+    render_h: Optional[int] = Form(None),
     processors: Dict = Depends(get_processors)
 ):
     """3D Face Meshを画像として可視化"""
@@ -161,7 +166,7 @@ async def visualize_mesh(
         
         # 画像の読み込み
         image_data = await image.read()
-        pil_image = Image.open(io.BytesIO(image_data))
+        pil_image = Image.open(io.BytesIO(image_data)).convert("RGB")
         
         logger.info(f"Visualizing mesh from image: {image.filename}, size: {pil_image.size}")
         
@@ -172,8 +177,23 @@ async def visualize_mesh(
             raise HTTPException(status_code=400, detail="Failed to detect face or build mesh")
         
         # メッシュを可視化（元画像に重ね描き）
+        # If render_w/h are provided, resize only the background canvas;
+        # mesh metadata preserves original image size and will be scaled accordingly in visualize_mesh.
+        bg = pil_image
+        if render_w and render_h and render_w > 0 and render_h > 0:
+            try:
+                bg = pil_image.resize((int(render_w), int(render_h)))
+            except Exception:
+                bg = pil_image
+
         mesh_image = processors["face_processor"].visualize_mesh(
-            face_mesh, (800, 600), background_image=pil_image, draw_indices=False
+            face_mesh,
+            (bg.size[0], bg.size[1]),
+            background_image=bg,
+            draw_indices=False,
+            draw_points=False,
+            alpha_wire=alpha,
+            line_thickness=thickness,
         )
         
         # 画像をbase64エンコード
@@ -341,6 +361,13 @@ async def overlay_mesh(
     target_image: UploadFile = File(...),
     consent: bool = Form(False),
     swap: bool = Form(True),  # 既定で target→source に重ねる
+    alpha: float = Form(0.45),
+    thickness: int = Form(1),
+    # Force background render size for consistency
+    render_w: Optional[int] = Form(None),
+    render_h: Optional[int] = Form(None),
+    # Optional: when swap=True, resize source background to target size before drawing
+    canon_to_target: bool = Form(False),
     processors: Dict = Depends(get_processors)
 ):
     """画像Aで作成したメッシュを、画像Bの顔に相似変換で合わせて重ねる"""
@@ -380,8 +407,21 @@ async def overlay_mesh(
             verts[:, :2] = XYt
             import trimesh
             aligned_mesh = trimesh.Trimesh(vertices=verts, faces=src_mesh.faces)
+            # Optional forced canvas size
+            bg_tgt = tgt_pil
+            if render_w and render_h and render_w > 0 and render_h > 0:
+                try:
+                    bg_tgt = tgt_pil.resize((int(render_w), int(render_h)))
+                except Exception:
+                    pass
             over_img = processors["face_processor"].visualize_mesh(
-                aligned_mesh, (tgt_pil.size[0], tgt_pil.size[1]), background_image=tgt_pil, draw_indices=False
+                aligned_mesh,
+                (bg_tgt.size[0], bg_tgt.size[1]),
+                background_image=bg_tgt,
+                draw_indices=False,
+                draw_points=False,
+                alpha_wire=alpha,
+                line_thickness=thickness,
             )
         else:
             # target のメッシュを source へ重ねる（反転）
@@ -397,8 +437,21 @@ async def overlay_mesh(
             verts[:, :2] = XYt
             import trimesh
             aligned_mesh = trimesh.Trimesh(vertices=verts, faces=tgt_mesh.faces)
+            # If requested, up/downscale source background to target size to keep perceived line width consistent.
+            bg_src = src_pil.resize(tgt_pil.size) if canon_to_target else src_pil
+            if render_w and render_h and render_w > 0 and render_h > 0:
+                try:
+                    bg_src = bg_src.resize((int(render_w), int(render_h)))
+                except Exception:
+                    pass
             over_img = processors["face_processor"].visualize_mesh(
-                aligned_mesh, (src_pil.size[0], src_pil.size[1]), background_image=src_pil, draw_indices=False
+                aligned_mesh,
+                (bg_src.size[0], bg_src.size[1]),
+                background_image=bg_src,
+                draw_indices=False,
+                draw_points=False,
+                alpha_wire=alpha,
+                line_thickness=thickness,
             )
 
         buf = io.BytesIO()

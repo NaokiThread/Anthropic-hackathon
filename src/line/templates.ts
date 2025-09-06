@@ -17,6 +17,7 @@ export const TREATMENTS: Treatment[] = [
 export function buildTreatmentQuickReply() {
   return {
     items: TREATMENTS.map((t) => ({
+      type: 'action',
       action: {
         type: 'postback',
         label: t.label,
@@ -57,6 +58,7 @@ export function buildRatingQuickReply() {
     { key: 'good', label: 'Good 👍' },
     { key: 'bad', label: 'Bad 👎' },
   ].map((r) => ({
+    type: 'action',
     action: {
       type: 'postback',
       label: r.label,
@@ -117,4 +119,4 @@ export function build2x2ComparisonFlex(urls: {
 
 // Mesh overlay instruction for image models. Keep neutral and additive.
 export const MESH_OVERLAY_PROMPT =
-  'Overlay a subtle, semi-transparent green facial landmark wireframe/mesh on the face (eyes, nose, mouth, jawline). Keep the image otherwise unchanged. Return only the overlaid image.';
+  'Overlay a subtle, semi-transparent BLUE facial landmark wireframe on the face (eyes, nose, mouth, jawline). Use a thin 1px line and consistent opacity (~45%). Keep everything else unchanged. Return only the overlaid image.';

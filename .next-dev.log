@@ -1,86 +1,62 @@
-
-> seikei_sim@0.1.0 dev /Users/naokithread/Anthropic-hackathon
-> next dev -p 3000
-
    ▲ Next.js 15.5.2
    - Local:        http://localhost:3000
-   - Network:      http://172.16.132.40:3000
+   - Network:      http://192.168.0.4:3000
    - Environments: .env
 
  ✓ Starting...
- ✓ Ready in 1273ms
- ✓ Compiled /api/line in 398ms (449 modules)
- POST /api/line 200 in 762ms
- POST /api/line 200 in 1945ms
- ✓ Compiled /api/cdn/[id] in 144ms (451 modules)
-Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at GET (src/app/api/cdn/[id]/route.ts:6:24)
-  4 |
-  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
-> 6 |   const id = ctx.params?.id;
-    |                        ^
-  7 |   const entry = id ? get(id) : undefined;
-  8 |   if (!entry) return new Response('Not Found', { status: 404 });
-  9 |   return new Response(entry.buf, {
- GET /api/cdn/5qimkdwl0xxmf7xl09d 200 in 587ms
- ✓ Compiled in 24ms
- ✓ Compiled /api/line in 123ms (255 modules)
- POST /api/line 200 in 332ms
- POST /api/line 200 in 204ms
- POST /api/line 200 in 2062ms
- ✓ Compiled /api/cdn/[id] in 45ms (257 modules)
-Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at GET (src/app/api/cdn/[id]/route.ts:6:24)
-  4 |
-  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
-> 6 |   const id = ctx.params?.id;
-    |                        ^
-  7 |   const entry = id ? get(id) : undefined;
-  8 |   if (!entry) return new Response('Not Found', { status: 404 });
-  9 |   return new Response(entry.buf, {
- GET /api/cdn/8b89lqckto2mf7xs1cj 200 in 126ms
- POST /api/line 200 in 201ms
- ✓ Compiled in 93ms (193 modules)
- ✓ Compiled in 28ms (193 modules)
- ✓ Compiled in 44ms (193 modules)
- ✓ Compiled in 19ms (193 modules)
+ ✓ Ready in 1280ms
  ○ Compiling / ...
- ✓ Compiled / in 699ms (573 modules)
+ ✓ Compiled / in 681ms (587 modules)
  ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET / 200 in 937ms
- ✓ Compiled /_not-found in 182ms (564 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboard 404 in 322ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 34ms
- ✓ Compiled in 74ms (241 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 24ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 33ms
- ✓ Compiled in 65ms (241 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 13ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 25ms
- ✓ Compiled in 62ms (241 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 10ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 35ms
- ✓ Compiled in 66ms (241 modules)
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 11ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /_not-found. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /dashboards 404 in 20ms
+ GET / 200 in 887ms
+ ✓ Compiled /api/line in 320ms (756 modules)
+ POST /api/line 200 in 574ms
+ POST /api/line 200 in 215ms
+ POST /api/line 200 in 2027ms
+ ✓ Compiled /api/cdn/[id] in 90ms (486 modules)
+Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/cdn/[id]/route.ts:6:24)
+  4 |
+  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
+> 6 |   const id = ctx.params?.id;
+    |                        ^
+  7 |   const entry = id ? get(id) : undefined;
+  8 |   if (!entry) return new Response('Not Found', { status: 404 });
+  9 |   return new Response(entry.buf, {
+Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/cdn/[id]/route.ts:6:24)
+  4 |
+  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
+> 6 |   const id = ctx.params?.id;
+    |                        ^
+  7 |   const entry = id ? get(id) : undefined;
+  8 |   if (!entry) return new Response('Not Found', { status: 404 });
+  9 |   return new Response(entry.buf, {
+ GET /api/cdn/lf28hnrc69mf8dfsr0 200 in 29ms
+ GET /api/cdn/wkyy77o6hb9mf8dfs76 200 in 568ms
+Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/cdn/[id]/route.ts:6:24)
+  4 |
+  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
+> 6 |   const id = ctx.params?.id;
+    |                        ^
+  7 |   const entry = id ? get(id) : undefined;
+  8 |   if (!entry) return new Response('Not Found', { status: 404 });
+  9 |   return new Response(entry.buf, {
+Error: Route "/api/cdn/[id]" used `params.id`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (src/app/api/cdn/[id]/route.ts:6:24)
+  4 |
+  5 | export async function GET(_req: Request, ctx: { params: { id: string } }) {
+> 6 |   const id = ctx.params?.id;
+    |                        ^
+  7 |   const entry = id ? get(id) : undefined;
+  8 |   if (!entry) return new Response('Not Found', { status: 404 });
+  9 |   return new Response(entry.buf, {
+ GET /api/cdn/u8eyo4nwx2rmf8dfsai 200 in 76ms
+ GET /api/cdn/a1z1ll76p6mf8dfsq8 200 in 107ms
+ POST /api/line 200 in 237ms
+ ✓ Compiled in 106ms (242 modules)
+ ✓ Compiled in 93ms (242 modules)
+ ✓ Compiled in 109ms (242 modules)
+ ✓ Compiled in 110ms (242 modules)

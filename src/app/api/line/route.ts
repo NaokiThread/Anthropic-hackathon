@@ -4,7 +4,7 @@ import { createLineClient } from '../../../line/client';
 import { InMemoryImageStore } from '../../../line/store';
 import { editImageWithGemini } from '../../../line/edit';
 import * as cdn from '../../../line/cdn';
-import { overlayMeshViaPythonServer } from '../../../line/mesh';
+import { overlayMeshViaPythonServer, overlayMeshTransferViaPythonServer } from '../../../line/mesh';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +47,32 @@ export async function POST(req: Request) {
         return `${baseUrl}/api/cdn/${id}`;
       },
       overlayMesh: process.env.PYTHON_MESH_API_URL
-        ? async (dataUrl: string) => overlayMeshViaPythonServer(dataUrl, { baseUrl: process.env.PYTHON_MESH_API_URL as string })
+        ? async (dataUrl: string, opts?: { renderW?: number; renderH?: number; alpha?: number; thickness?: number }) => {
+            const out = await overlayMeshViaPythonServer(dataUrl, {
+              baseUrl: process.env.PYTHON_MESH_API_URL as string,
+              timeoutMs: 20000,
+              alpha: opts?.alpha ?? 0.45,
+              thickness: opts?.thickness ?? 1,
+              renderW: opts?.renderW,
+              renderH: opts?.renderH,
+            });
+            return out;
+          }
+        : undefined,
+      overlayMeshTransfer: process.env.PYTHON_MESH_API_URL
+        ? async (src: string, tgt: string, opts?: { swap?: boolean; canonToTarget?: boolean; alpha?: number; thickness?: number; renderW?: number; renderH?: number }) => {
+            const out = await overlayMeshTransferViaPythonServer(src, tgt, {
+              baseUrl: process.env.PYTHON_MESH_API_URL as string,
+              timeoutMs: 25000,
+              alpha: opts?.alpha ?? 0.45,
+              thickness: opts?.thickness ?? 1,
+              swap: opts?.swap,
+              canonToTarget: opts?.canonToTarget,
+              renderW: opts?.renderW,
+              renderH: opts?.renderH,
+            });
+            return out;
+          }
         : undefined,
     },
   });
