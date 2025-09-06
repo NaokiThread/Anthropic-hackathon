@@ -130,11 +130,13 @@ export async function handleEvents(events: LineEvent[], deps: Deps): Promise<voi
             }
 
             try {
-              if (deps.overlayMesh) {
-                const beforeMesh = await deps.overlayMesh(toDataUrl(blob), { renderW: CANON, renderH: CANON });
-                origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(beforeMesh.dataUrl) : beforeMesh.dataUrl;
-              } else if (deps.overlayMeshTransfer) {
+              if (deps.overlayMeshTransfer) {
+                // BEFORE + Mesh も transfer API を優先（スタイル統一）
                 const beforeMesh = await deps.overlayMeshTransfer(toDataUrl(blob), edited.dataUrl, { swap: true, canonToTarget: true, renderW: CANON, renderH: CANON });
+                origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(beforeMesh.dataUrl) : beforeMesh.dataUrl;
+              } else if (deps.overlayMesh) {
+                // 最終フォールバック: 単体API
+                const beforeMesh = await deps.overlayMesh(toDataUrl(blob), { renderW: CANON, renderH: CANON });
                 origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(beforeMesh.dataUrl) : beforeMesh.dataUrl;
               }
             } catch (e) {

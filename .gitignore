@@ -4,3 +4,15 @@ node_modules
 .next
 coverage
 dist
+# Local dev artifacts
+.DS_Store
+*.pid
+*.log
+*.log.*
+.ngrok.*
+.python-server.*
+.next-dev.*
+.idea/
+.vscode/
+python-server/.venv/
+*.sqlite*

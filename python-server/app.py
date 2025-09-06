@@ -414,6 +414,12 @@ async def overlay_mesh(
                     bg_tgt = tgt_pil.resize((int(render_w), int(render_h)))
                 except Exception:
                     pass
+            # Ensure mesh carries the background canvas size so visualize_mesh scales correctly
+            try:
+                aligned_mesh.metadata = getattr(aligned_mesh, "metadata", {}) or {}
+                aligned_mesh.metadata["image_size"] = (int(bg_tgt.size[0]), int(bg_tgt.size[1]))
+            except Exception:
+                pass
             over_img = processors["face_processor"].visualize_mesh(
                 aligned_mesh,
                 (bg_tgt.size[0], bg_tgt.size[1]),
@@ -444,6 +450,12 @@ async def overlay_mesh(
                     bg_src = bg_src.resize((int(render_w), int(render_h)))
                 except Exception:
                     pass
+            # Ensure mesh carries the background canvas size so visualize_mesh scales correctly
+            try:
+                aligned_mesh.metadata = getattr(aligned_mesh, "metadata", {}) or {}
+                aligned_mesh.metadata["image_size"] = (int(bg_src.size[0]), int(bg_src.size[1]))
+            except Exception:
+                pass
             over_img = processors["face_processor"].visualize_mesh(
                 aligned_mesh,
                 (bg_src.size[0], bg_src.size[1]),

@@ -339,34 +339,28 @@ class FaceMeshProcessor:
                     and mesh.faces is not None
                     and len(mesh.faces) > 0
                 ):
+                    # Draw unique edges once to avoid double-thick lines due to
+                    # shared edges between adjacent triangles.
                     faces = np.asarray(mesh.faces, dtype=np.int32)
+                    unique_edges = set()
                     for tri in faces:
                         i, j, k = int(tri[0]), int(tri[1]), int(tri[2])
-                        if i < len(Xp) and j < len(Xp) and k < len(Xp):
-                            cv2_local.line(
-                                overlay,
-                                (int(Xp[i]), int(Yp[i])),
-                                (int(Xp[j]), int(Yp[j])),
-                                line_color_bgr,
-                                thickness,
-                                lineType=line_type,
-                            )
-                            cv2_local.line(
-                                overlay,
-                                (int(Xp[j]), int(Yp[j])),
-                                (int(Xp[k]), int(Yp[k])),
-                                line_color_bgr,
-                                thickness,
-                                lineType=line_type,
-                            )
-                            cv2_local.line(
-                                overlay,
-                                (int(Xp[k]), int(Yp[k])),
-                                (int(Xp[i]), int(Yp[i])),
-                                line_color_bgr,
-                                thickness,
-                                lineType=line_type,
-                            )
+                        if i < len(Xp) and j < len(Xp):
+                            unique_edges.add(tuple(sorted((i, j))))
+                        if j < len(Xp) and k < len(Xp):
+                            unique_edges.add(tuple(sorted((j, k))))
+                        if k < len(Xp) and i < len(Xp):
+                            unique_edges.add(tuple(sorted((k, i))))
+
+                    for a, b in unique_edges:
+                        cv2_local.line(
+                            overlay,
+                            (int(Xp[a]), int(Yp[a])),
+                            (int(Xp[b]), int(Yp[b])),
+                            line_color_bgr,
+                            thickness,
+                            lineType=line_type,
+                        )
                 else:
                     try:
                         from mediapipe.python.solutions.face_mesh_connections import (
