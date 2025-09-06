@@ -1,5 +1,5 @@
 import type { Deps, LineEvent, TextMessage, ImageMessage } from './types';
-import { buildTreatmentQuickReply, treatmentToPrompt, buildRatingQuickReply } from './templates';
+import { buildTreatmentQuickReply, treatmentToPrompt, buildRatingQuickReply, build2x2ComparisonFlex, MESH_OVERLAY_PROMPT } from './templates';
 
 function getUserId(ev: LineEvent): string | undefined {
   const src = (ev as any).source;
@@ -68,13 +68,32 @@ export async function handleEvents(events: LineEvent[], deps: Deps): Promise<voi
             originalContentUrl: url,
             previewImageUrl: url,
           } as any;
+
+          // Prepare 2x2 grid assets
+          const toDataUrl = (b: { data: Buffer; mimeType: string }) => `data:${b.mimeType};base64,${b.data.toString('base64')}`;
+          const originalUrl = deps.toPublicUrl ? await deps.toPublicUrl(toDataUrl(blob)) : toDataUrl(blob);
+          // Generate mesh overlays by reusing editImageWithPrompt with a mesh instruction
+          const origMesh = await deps.editImageWithPrompt(blob, MESH_OVERLAY_PROMPT);
+          const origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
+          // Convert edited dataUrl to blob for mesh overlay
+          const m = /^data:([^;]+);base64,(.*)$/i.exec(edited.dataUrl);
+          const editedBlob = m ? { mimeType: m[1], data: Buffer.from(m[2], 'base64') } : { mimeType: 'image/png', data: Buffer.alloc(0) };
+          const afterMesh = await deps.editImageWithPrompt(editedBlob as any, MESH_OVERLAY_PROMPT);
+          const afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+
+          const flex = build2x2ComparisonFlex({
+            before: originalUrl,
+            after: url,
+            beforeMesh: origMeshUrl,
+            afterMesh: afterMeshUrl,
+          });
           const ask: TextMessage = {
             type: 'text',
             text: '結果はいかがでしたか？',
             quickReply: buildRatingQuickReply(),
           } as any;
           if (deps.pushMessage) {
-            await deps.pushMessage(userId, { messages: [img, ask] });
+            await deps.pushMessage(userId, { messages: [img, flex as any, ask] });
           }
         } else {
           const msg: TextMessage = {

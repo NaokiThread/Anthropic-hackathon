@@ -66,3 +66,55 @@ export function buildRatingQuickReply() {
   }));
   return { items } as const;
 }
+
+// Build a LINE Flex Message showing a 2x2 grid of images.
+// Layout: [ Before | After ] on first row, [ Before+Mesh | After+Mesh ] on second row.
+export function build2x2ComparisonFlex(urls: {
+  before: string;
+  after: string;
+  beforeMesh: string;
+  afterMesh: string;
+}) {
+  const image = (url: string) => ({ type: 'image', url, size: 'full', aspectMode: 'cover', aspectRatio: '1:1' });
+  const twoCols = (a: string, b: string) => ({
+    type: 'box',
+    layout: 'horizontal',
+    spacing: 'md',
+    contents: [
+      { type: 'box', layout: 'vertical', flex: 1, contents: [image(a)] },
+      { type: 'box', layout: 'vertical', flex: 1, contents: [image(b)] },
+    ],
+  });
+  const labels = (a: string, b: string) => ({
+    type: 'box',
+    layout: 'horizontal',
+    spacing: 'md',
+    contents: [
+      { type: 'text', text: a, size: 'xs', color: '#666666', align: 'center', flex: 1 },
+      { type: 'text', text: b, size: 'xs', color: '#666666', align: 'center', flex: 1 },
+    ],
+  });
+  const contents = {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        labels('Before', 'After'),
+        twoCols(urls.before, urls.after),
+        labels('Before + Mesh', 'After + Mesh'),
+        twoCols(urls.beforeMesh, urls.afterMesh),
+      ],
+    },
+  } as const;
+  return {
+    type: 'flex',
+    altText: 'Before/After 2x2 比較',
+    contents,
+  } as const;
+}
+
+// Mesh overlay instruction for image models. Keep neutral and additive.
+export const MESH_OVERLAY_PROMPT =
+  'Overlay a subtle, semi-transparent green facial landmark wireframe/mesh on the face (eyes, nose, mouth, jawline). Keep the image otherwise unchanged. Return only the overlaid image.';

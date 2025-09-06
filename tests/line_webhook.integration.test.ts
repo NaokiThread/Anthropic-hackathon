@@ -11,6 +11,7 @@ const baseDeps = (): Deps => ({
     set: vi.fn(async () => {}),
     get: vi.fn(async () => undefined),
   },
+  toPublicUrl: vi.fn(async (dataUrl: string) => `http://cdn/${Buffer.from(dataUrl).toString('hex').slice(0,8)}`),
 });
 
 describe('handleEvents', () => {
@@ -34,9 +35,17 @@ describe('handleEvents', () => {
     expect(payload).toMatchObject({ messages: [ { quickReply: expect.any(Object) } ] });
   });
 
-  it('postback with treatment -> replies "generating" then pushes edited image + rating quick reply', async () => {
+  it('postback with treatment -> replies "generating" then pushes edited image + 2x2 grid + rating quick reply', async () => {
     // Pre-store image for user
     (deps.store.get as any).mockResolvedValueOnce({ data: Buffer.from('img'), mimeType: 'image/png' });
+    // Make editImageWithPrompt return different images for successive calls
+    let call = 0;
+    (deps.editImageWithPrompt as any).mockImplementation(async () => {
+      call += 1;
+      if (call === 1) return { dataUrl: 'data:image/png;base64,AFTER' }; // after image
+      if (call === 2) return { dataUrl: 'data:image/png;base64,ORIG_MESH' }; // original with mesh
+      return { dataUrl: 'data:image/png;base64,AFTER_MESH' }; // after with mesh
+    });
     const events: LineEvent[] = [
       {
         type: 'postback',
@@ -52,12 +61,37 @@ describe('handleEvents', () => {
     expect(deps.replyMessage).toHaveBeenCalled();
     const replyPayload = (deps.replyMessage as any).mock.calls[0][1];
     expect(replyPayload).toMatchObject({ messages: [ { type: 'text' } ] });
-    // 2) push image and ask for rating
+    // 2) push image + grid and ask for rating
     expect(deps.pushMessage).toHaveBeenCalled();
     const pushArgs = (deps.pushMessage as any).mock.calls[0];
     expect(pushArgs[0]).toBe('U1');
     const pushPayload = pushArgs[1];
-    expect(pushPayload).toMatchObject({ messages: [ { type: 'image' }, { type: 'text' } ] });
+    expect(Array.isArray(pushPayload.messages)).toBe(true);
+    // Should include an image message (After), a flex (2x2), and a text (rating)
+    const types = pushPayload.messages.map((m: any) => m.type);
+    expect(types).toContain('image');
+    expect(types).toContain('flex');
+    expect(types).toContain('text');
+    // Validate Flex message shape includes 4 images
+    const flex = pushPayload.messages.find((m: any) => m.type === 'flex');
+    expect(flex).toBeDefined();
+    const body = flex.contents?.body;
+    expect(body?.type).toBe('box');
+    // Count image components recursively
+    function countImages(node: any): number {
+      if (!node) return 0;
+      let c = node.type === 'image' ? 1 : 0;
+      const children = ([] as any[]).concat(
+        node.contents || [],
+        node.children || [],
+        node.body ? [node.body] : [],
+        node.header ? [node.header] : [],
+        node.footer ? [node.footer] : []
+      );
+      for (const ch of children) c += countImages(ch);
+      return c;
+    }
+    expect(countImages(flex.contents)).toBeGreaterThanOrEqual(4);
   });
 
   it('postback with rating -> thanks reply', async () => {
