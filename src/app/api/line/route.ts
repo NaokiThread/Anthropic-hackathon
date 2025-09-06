@@ -4,6 +4,7 @@ import { createLineClient } from '../../../line/client';
 import { InMemoryImageStore } from '../../../line/store';
 import { editImageWithGemini } from '../../../line/edit';
 import * as cdn from '../../../line/cdn';
+import { overlayMeshViaPythonServer } from '../../../line/mesh';
 
 export const runtime = 'nodejs';
 
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
         if (!baseUrl) return `/api/cdn/${id}`; // best-effort
         return `${baseUrl}/api/cdn/${id}`;
       },
+      overlayMesh: process.env.PYTHON_MESH_API_URL
+        ? async (dataUrl: string) => overlayMeshViaPythonServer(dataUrl, { baseUrl: process.env.PYTHON_MESH_API_URL as string })
+        : undefined,
     },
   });
 

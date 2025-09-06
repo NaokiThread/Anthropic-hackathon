@@ -27,6 +27,8 @@ export type Deps = {
   editImageWithPrompt: (blob: ImageBlob, prompt: string) => Promise<{ dataUrl: string }>;
   store: ImageStore;
   toPublicUrl?: (dataUrl: string) => Promise<string>;
+  // Optional: overlay a facial mesh on given image (dataUrl in / out)
+  overlayMesh?: (dataUrl: string) => Promise<{ dataUrl: string }>;
 };
 
 export type TextMessage = { type: 'text'; text: string; quickReply?: any };

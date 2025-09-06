@@ -72,14 +72,23 @@ export async function handleEvents(events: LineEvent[], deps: Deps): Promise<voi
           // Prepare 2x2 grid assets
           const toDataUrl = (b: { data: Buffer; mimeType: string }) => `data:${b.mimeType};base64,${b.data.toString('base64')}`;
           const originalUrl = deps.toPublicUrl ? await deps.toPublicUrl(toDataUrl(blob)) : toDataUrl(blob);
-          // Generate mesh overlays by reusing editImageWithPrompt with a mesh instruction
-          const origMesh = await deps.editImageWithPrompt(blob, MESH_OVERLAY_PROMPT);
-          const origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
-          // Convert edited dataUrl to blob for mesh overlay
-          const m = /^data:([^;]+);base64,(.*)$/i.exec(edited.dataUrl);
-          const editedBlob = m ? { mimeType: m[1], data: Buffer.from(m[2], 'base64') } : { mimeType: 'image/png', data: Buffer.alloc(0) };
-          const afterMesh = await deps.editImageWithPrompt(editedBlob as any, MESH_OVERLAY_PROMPT);
-          const afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+          // Generate mesh overlays (prefer python-server if provided)
+          let origMeshUrl: string;
+          let afterMeshUrl: string;
+          if (deps.overlayMesh) {
+            const origMesh = await deps.overlayMesh(toDataUrl(blob));
+            origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
+            const afterMesh = await deps.overlayMesh(edited.dataUrl);
+            afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+          } else {
+            // Fallback: use image model to draw mesh
+            const origMesh = await deps.editImageWithPrompt(blob, MESH_OVERLAY_PROMPT);
+            origMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(origMesh.dataUrl) : origMesh.dataUrl;
+            const m = /^data:([^;]+);base64,(.*)$/i.exec(edited.dataUrl);
+            const editedBlob = m ? { mimeType: m[1], data: Buffer.from(m[2], 'base64') } : { mimeType: 'image/png', data: Buffer.alloc(0) };
+            const afterMesh = await deps.editImageWithPrompt(editedBlob as any, MESH_OVERLAY_PROMPT);
+            afterMeshUrl = deps.toPublicUrl ? await deps.toPublicUrl(afterMesh.dataUrl) : afterMesh.dataUrl;
+          }
 
           const flex = build2x2ComparisonFlex({
             before: originalUrl,
